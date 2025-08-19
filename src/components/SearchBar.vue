@@ -1,15 +1,46 @@
 <template>
-  <section class="bg-white h-[88px] flex justify-center items-center">
+  <section class="flex justify-center items-center bg-white h-[88px]">
     <div class="relative w-[804px]">
-      <span class="absolute left-0 top-1/2 -translate-y-1/2 bg-primary bg-blue-700 text-white rounded-full px-8 py-3 z-10">
-        法 / 英
-      </span>
+      <select 
+        v-model="selectedLang"
+        class="top-1/2 left-0 z-10 absolute bg-blue-700 px-8 py-3 border-none rounded-full outline-none text-white -translate-y-1/2 appearance-none cursor-pointer"
+      >
+        <option value="fr">法语</option>
+        <option value="en">英语</option>
+      </select>
       <input
+          v-model="searchQuery"
+          @keyup.enter="handleSearch"
           type="text"
           placeholder="请输入单词"
-          class="w-full h-[56px] pl-[207px] pr-[70px] border-[5px] border-primary border-blue-700 rounded-full text-xl outline-none"
+          class="pr-[70px] pl-[207px] border-[5px] border-blue-700 focus:border-blue-500 rounded-full outline-none w-full h-[56px] text-xl"
       />
-      <button class="absolute right-0 top-1/2 -translate-y-1/2 w-[56px] h-[56px] bg-primary rounded-full bg-[url('/images/search.png')] bg-no-repeat bg-center bg-[length:60%]" />
+      <button 
+        @click="handleSearch"
+        class="top-1/2 right-0 absolute bg-[length:60%] bg-[url('/images/search.png')] bg-blue-700 hover:bg-blue-600 bg-no-repeat bg-center rounded-full w-[56px] h-[56px] -translate-y-1/2" 
+      />
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const searchQuery = ref('')
+const selectedLang = ref('fr')
+
+const handleSearch = () => {
+  if (searchQuery.value.trim()) {
+    // 跳转到词典页面并传递搜索参数
+    router.push({
+      name: 'Dict',
+      query: {
+        q: searchQuery.value.trim(),
+        lang: selectedLang.value
+      }
+    })
+  }
+}
+</script>

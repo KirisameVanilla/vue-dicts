@@ -1,13 +1,13 @@
 <template>
-  <header class="bg-white h-[174px] flex items-center">
-    <div class="max-w-[1030px] mx-auto flex items-center w-full">
+  <header class="flex items-center bg-white h-[174px]">
+    <div class="flex items-center mx-auto w-full max-w-[1030px]">
       <!-- Logo -->
-      <router-link to="/" class="block w-[237px] h-[61px] bg-[url('/images/LOGO.png')] bg-contain bg-no-repeat pl-[100px] leading-[60px] font-deserta text-5xl text-blue-700">
+      <router-link to="/" class="block bg-[url('/images/LOGO.png')] bg-contain bg-no-repeat pl-[100px] w-[237px] h-[61px] font-deserta text-blue-700 text-5xl leading-[60px]">
         CiDian
       </router-link>
 
       <!-- Nav -->
-      <nav class="ml-[187px] flex space-x-[53px] text-xl">
+      <nav class="flex space-x-[53px] ml-[187px] text-xl">
         <router-link v-slot="{ isActive }" to="/dict">
           <a
               :class="[
@@ -45,13 +45,28 @@
       </nav>
 
       <!-- User -->
-      <div class="flex space-x-4 ml-auto">
-        <a href="#" class="w-[42px] h-[42px] bg-gray-300 rounded-full border-2 border-primary block" />
-        <a href="#" class="w-[25px] h-[32px] bg-[url('/images/bell.png')] bg-cover" />
-        <a href="#" class="w-[42px] h-[42px] bg-[url('/images/icon_任务栏收缩.png')] bg-cover" />
+      <div class="flex items-center space-x-4 ml-auto">
+        <template v-if="isAuthenticated">
+          <span class="font-inter text-gray-700">{{ user?.username }}</span>
+          <a href="#" class="block bg-gray-300 border-2 border-blue-700 rounded-full w-[42px] h-[42px]" />
+          <a href="#" class="bg-[url('/images/bell.png')] bg-cover w-[25px] h-[32px]" />
+          <button @click="handleLogout" class="bg-[url('/images/icon_任务栏收缩.png')] bg-cover w-[42px] h-[42px]" />
+        </template>
+        <template v-else>
+          <router-link to="/login" class="bg-blue-700 hover:bg-blue-600 px-6 py-2 rounded-full font-inter text-white">
+            登录
+          </router-link>
+        </template>
       </div>
     </div>
   </header>
 </template>
 <script setup lang="ts">
+import { useAuth } from '../composables/useAuth'
+
+const { user, isAuthenticated, logout } = useAuth()
+
+const handleLogout = async () => {
+  await logout()
+}
 </script>
