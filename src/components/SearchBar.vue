@@ -1,9 +1,10 @@
 <template>
   <section class="flex justify-center items-center bg-white h-[88px]">
-    <div class="relative w-[804px]">
+    <div class="relative w-[804px]" :class="{ 'focused': isInputFocused }">
       <select 
         v-model="selectedLang"
-        class="top-1/2 left-0 z-10 absolute bg-blue-700 px-8 py-3 border-none rounded-full outline-none text-white -translate-y-1/2 appearance-none cursor-pointer"
+        class="top-1/2 left-0 z-10 absolute px-8 py-3 border-none rounded-full outline-none text-white transition-colors -translate-y-1/2 duration-200 appearance-none cursor-pointer"
+        :style="{ backgroundColor: isInputFocused ? '#3b82f6' : '#1d4ed8' }"
       >
         <option value="jp">日语</option>
         <option value="fr">法语</option>
@@ -12,15 +13,19 @@
           v-model="searchQuery"
           @keyup.enter="handleSearch"
           @input="handleInputChange"
-          @focus="showSuggestions = true"
+          @focus="handleInputFocus"
           @blur="handleInputBlur"
           type="text"
           placeholder="请输入单词"
-          class="pr-[70px] pl-[207px] border-[5px] border-blue-700 focus:border-blue-500 rounded-full outline-none w-full h-[56px] text-xl"
+          class="pr-[70px] pl-[160px] border-[5px] border-blue-700 focus:border-blue-500 rounded-full outline-none w-full h-[56px] text-xl transition-colors duration-200"
       />
       <button 
         @click="handleSearch"
-        class="top-1/2 right-0 absolute bg-[length:60%] bg-[url('/images/search.png')] bg-blue-700 hover:bg-blue-600 bg-no-repeat bg-center rounded-full w-[56px] h-[56px] -translate-y-1/2" 
+        @mouseenter="handleButtonMouseEnter"
+        @mouseleave="handleButtonMouseLeave"
+        ref="searchButton"
+        class="top-1/2 right-0 absolute bg-[length:60%] bg-[url('/images/search.png')] bg-no-repeat bg-center rounded-full w-[56px] h-[56px] transition-colors -translate-y-1/2 duration-200" 
+        :style="{ backgroundColor: buttonBgColor }"
       />
       
       <!-- 搜索推荐下拉框 -->
@@ -42,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { searchSuggest } from '../api/dict'
 
@@ -51,8 +56,18 @@ const searchQuery = ref('')
 const selectedLang = ref('jp')
 const suggestions = ref<string[]>([])
 const showSuggestions = ref(false)
+const isInputFocused = ref(false)
+const isButtonHovered = ref(false)
 const debounceTimer = ref<number | null>(null)
 const isLoading = ref(false)
+
+// 计算按钮背景色
+const buttonBgColor = computed(() => {
+  if (isButtonHovered.value) {
+    return isInputFocused.value ? '#60a5fa' : '#2563eb' // hover时的颜色
+  }
+  return isInputFocused.value ? '#3b82f6' : '#1d4ed8' // 默认颜色
+})
 
 // 防抖函数
 const debounce = (fn: Function, delay: number) => {
@@ -102,12 +117,29 @@ const handleInputChange = () => {
   }
 }
 
+// 处理输入框获得焦点
+const handleInputFocus = () => {
+  isInputFocused.value = true
+  showSuggestions.value = true
+}
+
 // 处理输入框失去焦点
 const handleInputBlur = () => {
+  isInputFocused.value = false
   // 延迟隐藏建议列表，让点击事件有时间执行
   setTimeout(() => {
     showSuggestions.value = false
   }, 200)
+}
+
+// 处理按钮鼠标进入
+const handleButtonMouseEnter = () => {
+  isButtonHovered.value = true
+}
+
+// 处理按钮鼠标离开
+const handleButtonMouseLeave = () => {
+  isButtonHovered.value = false
 }
 
 // 选择建议
