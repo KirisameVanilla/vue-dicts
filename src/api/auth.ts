@@ -35,7 +35,12 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
 
 // 用户注册
 export const register = async (userData: RegisterRequest): Promise<RegisterResponse> => {
-  const response = await apiClient.post('/users/register', userData)
+  // 确保 portrait 字段存在，如果没有则设置为空字符串
+  const requestData = {
+    ...userData,
+    portrait: userData.portrait || ''
+  }
+  const response = await apiClient.post('/users/register', requestData)
   return response.data
 }
 

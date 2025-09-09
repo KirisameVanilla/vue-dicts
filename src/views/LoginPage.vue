@@ -107,9 +107,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import { useModal } from '../composables/useModal'
 
 const router = useRouter()
 const { login, register } = useAuth()
+const { showSuccess, showError } = useModal()
 
 const isLogin = ref(true)
 
@@ -121,7 +123,8 @@ const loginForm = ref({
 const registerForm = ref({
   username: '',
   password: '',
-  lang_pref: 'fr' as 'jp' | 'fr' | 'private'
+  lang_pref: 'fr' as 'jp' | 'fr' | 'private',
+  portrait: ''
 })
 
 const confirmPassword = ref('')
@@ -159,11 +162,25 @@ const handleLogin = async () => {
   error.value = ''
 
   try {
-    await login(loginForm.value)
-    router.push('/dict')
+    const response = await login(loginForm.value)
+    
+    // 检查登录是否成功
+    if (response && response.access_token) {
+      // 显示成功modal
+      showSuccess('登录成功！正在跳转...', 2000)
+      
+      // 2秒后跳转到字典页面
+      setTimeout(() => {
+        router.push('/dict')
+      }, 2000)
+    } else {
+      showError('登录失败，请检查用户名和密码')
+    }
   } catch (err: any) {
     console.error('Login error:', err)
-    error.value = err.response?.data?.detail || '登录失败，请检查用户名和密码'
+    const errorMessage = err.response?.data?.detail || err.response?.data?.message || '登录失败，请检查用户名和密码'
+    showError(errorMessage)
+    error.value = errorMessage
   } finally {
     loading.value = false
   }
@@ -192,24 +209,37 @@ const handleRegister = async () => {
 
   try {
     const username = registerForm.value.username // 保存用户名
-    await register(registerForm.value)
-    successMessage.value = '注册成功！请登录'
+    const response = await register(registerForm.value)
     
-    // 将用户名填入登录表单
-    loginForm.value.name = username
-    
-    // 切换到登录模式并清空注册表单
-    isLogin.value = true
-    registerForm.value = {
-      username: '',
-      password: '',
-      lang_pref: 'fr'
+    // 检查注册是否成功
+    if (response && response.id) {
+      // 显示成功modal
+      showSuccess('注册成功！2秒后将切换到登录页面', 2000)
+      
+      // 将用户名填入登录表单
+      loginForm.value.name = username
+      
+      // 2秒后切换到登录模式并清空注册表单
+      setTimeout(() => {
+        isLogin.value = true
+        registerForm.value = {
+          username: '',
+          password: '',
+          lang_pref: 'fr',
+          portrait: ''
+        }
+        confirmPassword.value = ''
+      }, 2000)
+    } else {
+      // 注册失败
+      showError('注册失败，请检查返回信息')
     }
-    confirmPassword.value = ''
     
   } catch (err: any) {
     console.error('Register error:', err)
-    error.value = err.response?.data?.detail || '注册失败，请稍后重试'
+    const errorMessage = err.response?.data?.detail || err.response?.data?.message || '注册失败，请稍后重试'
+    showError(errorMessage)
+    error.value = errorMessage
   } finally {
     loading.value = false
   }

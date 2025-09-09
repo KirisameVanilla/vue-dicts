@@ -8,6 +8,7 @@ const router = createRouter({
         { path: '/trans', name: 'Translation', component: () => import('../views/TranslationPage.vue') },
         { path: '/write', name: 'Writing', component: () => import('../views/WritingPage.vue') },
         { path: '/login', name: 'Login', component: () => import('../views/LoginPage.vue') },
+        { path: '/modal-test', name: 'ModalTest', component: () => import('../views/ModalTestPage.vue') },
     ],
 })
 
