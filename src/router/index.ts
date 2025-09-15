@@ -13,7 +13,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _, next) => {
     const token = localStorage.getItem('access_token')
     
     // 需要认证的页面

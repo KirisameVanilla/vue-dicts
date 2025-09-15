@@ -74,7 +74,7 @@
                 </div>
                 <div v-else-if="writingFeedback" class="space-y-4">
                   <div v-for="(section, key) in writingFeedback" :key="key" class="bg-white p-4 rounded">
-                    <h4 class="mb-2 font-semibold text-blue-700">{{ getSectionTitle(key) }}</h4>
+                    <h4 class="mb-2 font-semibold text-blue-700">{{ getSectionTitle(String(key)) }}</h4>
                     <div v-if="Array.isArray(section)">
                       <ul class="space-y-1 list-disc list-inside">
                         <li v-for="(item, index) in section" :key="index" class="text-gray-700 text-sm">
