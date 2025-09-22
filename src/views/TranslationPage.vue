@@ -6,8 +6,8 @@
     <section class="bg-white py-12">
       <div class="mx-auto px-4 max-w-[1030px]">
         <div class="mb-8 text-center">
-          <h1 class="mb-4 font-deserta text-blue-700 text-4xl">法语翻译</h1>
-          <p class="font-inter text-gray-600">中法双向翻译，助力语言学习</p>
+          <h1 class="mb-4 font-deserta text-blue-700 text-4xl">多语言翻译</h1>
+          <p class="font-inter text-gray-600">支持中文、法语、日语互译，助力语言学习</p>
         </div>
         
         <div class="mx-auto max-w-[900px]">
@@ -17,9 +17,10 @@
               <div class="flex justify-between items-center mb-4">
                 <h3 class="font-semibold text-gray-700">源语言</h3>
                 <select v-model="sourceLang" class="px-3 py-1 border border-gray-300 rounded">
+                  <option value="auto">自动检测</option>
                   <option value="zh">中文</option>
                   <option value="fr">法语</option>
-                  <option value="en">英语</option>
+                  <option value="jp">日语</option>
                 </select>
               </div>
               <textarea
@@ -36,7 +37,7 @@
                 <select v-model="targetLang" class="px-3 py-1 border border-gray-300 rounded">
                   <option value="zh">中文</option>
                   <option value="fr">法语</option>
-                  <option value="en">英语</option>
+                  <option value="jp">日语</option>
                 </select>
               </div>
               <div class="bg-white p-4 border border-gray-300 rounded-lg w-full h-[200px] overflow-y-auto">
@@ -93,11 +94,11 @@
           <div v-for="(item, index) in translationHistory" :key="index" class="bg-white shadow-sm p-4 rounded-lg">
             <div class="gap-4 grid grid-cols-1 md:grid-cols-2">
               <div>
-                <p class="mb-1 text-gray-500 text-sm">{{ item.sourceLang === 'zh' ? '中文' : item.sourceLang === 'fr' ? '法语' : '英语' }}</p>
+                <p class="mb-1 text-gray-500 text-sm">{{ getLanguageDisplayName(item.sourceLang) }}</p>
                 <p class="text-gray-800">{{ item.sourceText }}</p>
               </div>
               <div>
-                <p class="mb-1 text-gray-500 text-sm">{{ item.targetLang === 'zh' ? '中文' : item.targetLang === 'fr' ? '法语' : '英语' }}</p>
+                <p class="mb-1 text-gray-500 text-sm">{{ getLanguageDisplayName(item.targetLang) }}</p>
                 <p class="text-gray-800">{{ item.translationResult }}</p>
               </div>
             </div>
@@ -121,6 +122,7 @@
 import { ref, onMounted } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 import AppFooter from '../components/AppFooter.vue'
+import { translateText, type TranslateRequest } from '../api/translate'
 
 interface TranslationHistoryItem {
   sourceText: string
@@ -130,15 +132,23 @@ interface TranslationHistoryItem {
   timestamp: string
 }
 
+// 语言显示名称映射
+const langDisplayMap: Record<string, string> = {
+  'zh': '中文',
+  'fr': '法语', 
+  'jp': '日语',
+  'auto': '自动检测'
+}
+
 const sourceText = ref('')
 const translationResult = ref('')
-const sourceLang = ref('zh')
-const targetLang = ref('fr')
+const sourceLang = ref('auto')
+const targetLang = ref('zh')
 const loading = ref(false)
 const error = ref('')
 const translationHistory = ref<TranslationHistoryItem[]>([])
 
-// 模拟翻译API调用
+// 真实翻译API调用
 const handleTranslate = async () => {
   if (!sourceText.value.trim()) return
 
@@ -146,26 +156,27 @@ const handleTranslate = async () => {
   error.value = ''
 
   try {
-    // 这里应该调用真实的翻译API
-    // 现在使用模拟翻译
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 简单的模拟翻译逻辑
-    let result = ''
-    if (sourceLang.value === 'zh' && targetLang.value === 'fr') {
-      result = `[法语翻译] ${sourceText.value}`
-    } else if (sourceLang.value === 'fr' && targetLang.value === 'zh') {
-      result = `[中文翻译] ${sourceText.value}`
-    } else {
-      result = `[翻译结果] ${sourceText.value}`
+    // 准备API请求参数
+    const translateParams: TranslateRequest = {
+      query: sourceText.value.trim(),
+      from_lang: sourceLang.value as 'auto' | 'fr' | 'jp' | 'zh',
+      to_lang: targetLang.value as 'fr' | 'jp' | 'zh'
     }
-    
-    translationResult.value = result
+
+    // 如果目标语言是auto，则不能翻译，需要选择具体语言
+    if (targetLang.value === 'auto') {
+      error.value = '目标语言不能为自动检测，请选择具体语言'
+      return
+    }
+
+    // 调用翻译API
+    const result = await translateText(translateParams)
+    translationResult.value = result.translated_text
     
     // 添加到历史记录
     const historyItem: TranslationHistoryItem = {
       sourceText: sourceText.value,
-      translationResult: result,
+      translationResult: result.translated_text,
       sourceLang: sourceLang.value,
       targetLang: targetLang.value,
       timestamp: new Date().toLocaleString('zh-CN')
@@ -178,13 +189,19 @@ const handleTranslate = async () => {
     
   } catch (err: any) {
     console.error('Translation error:', err)
-    error.value = '翻译失败，请稍后重试'
+    error.value = err.message || '翻译失败，请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
 const swapLanguages = () => {
+  // 防止目标语言被设置为auto
+  if (sourceLang.value === 'auto') {
+    error.value = '无法交换：源语言为自动检测时不能进行语言交换'
+    return
+  }
+  
   const temp = sourceLang.value
   sourceLang.value = targetLang.value
   targetLang.value = temp
@@ -201,6 +218,11 @@ const clearText = () => {
   sourceText.value = ''
   translationResult.value = ''
   error.value = ''
+}
+
+// 获取语言显示名称
+const getLanguageDisplayName = (langCode: string): string => {
+  return langDisplayMap[langCode] || langCode
 }
 
 // 从localStorage加载翻译历史
