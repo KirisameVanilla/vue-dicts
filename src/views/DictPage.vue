@@ -90,8 +90,8 @@ const handleSearch = async (query: string, lang: string) => {
 
   try {
     const result = await searchWord({
-      lang_pref: lang,
-      query_word: query.trim()
+      language: lang,
+      query: query.trim()
     })
     searchResult.value = result
   } catch (err: any) {

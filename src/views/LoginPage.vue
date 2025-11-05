@@ -64,13 +64,49 @@
             class="px-8 border border-blue-700 focus:border-blue-500 rounded-full outline-none w-full h-[63px] text-2xl" 
           />
 
-          <!-- 注册时显示确认密码 -->
+          <!-- 注册时显示额外字段 -->
           <template v-if="!isLogin">
             <label class="block mt-8 mb-6 text-gray-500 text-xl">确认密码</label>
             <input 
               v-model="confirmPassword"
               type="password" 
               required
+              class="px-8 border border-blue-700 focus:border-blue-500 rounded-full outline-none w-full h-[63px] text-2xl" 
+            />
+
+            <label class="block mt-8 mb-6 text-gray-500 text-xl">邮箱</label>
+            <input 
+              v-model="registerForm.email"
+              type="email" 
+              required
+              placeholder="请输入邮箱地址"
+              class="px-8 border border-blue-700 focus:border-blue-500 rounded-full outline-none w-full h-[63px] text-2xl" 
+            />
+
+            <label class="block mt-8 mb-6 text-gray-500 text-xl">邮箱验证码</label>
+            <div class="flex gap-4">
+              <input 
+                v-model="registerForm.code"
+                type="text" 
+                required
+                placeholder="请输入邮箱验证码"
+                class="flex-1 px-8 border border-blue-700 focus:border-blue-500 rounded-full outline-none h-[63px] text-2xl" 
+              />
+              <button
+                type="button"
+                @click="sendVerificationCode"
+                :disabled="sendingCode || countdown > 0 || !registerForm.email"
+                class="bg-blue-700 hover:bg-blue-600 disabled:opacity-50 px-6 rounded-full text-white text-lg whitespace-nowrap disabled:cursor-not-allowed"
+              >
+                {{ countdown > 0 ? `${countdown}秒后重试` : (codeSent ? '重新发送' : '发送验证码') }}
+              </button>
+            </div>
+
+            <label class="block mt-8 mb-6 text-gray-500 text-xl">手机号（可选）</label>
+            <input 
+              v-model="registerForm.phone"
+              type="tel" 
+              placeholder="请输入手机号（可选）"
               class="px-8 border border-blue-700 focus:border-blue-500 rounded-full outline-none w-full h-[63px] text-2xl" 
             />
 
@@ -104,10 +140,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import { useModal } from '../composables/useModal'
+import { sendEmailVerification } from '../api/auth'
 
 const router = useRouter()
 const { login, register } = useAuth()
@@ -123,11 +160,17 @@ const loginForm = ref({
 const registerForm = ref({
   username: '',
   password: '',
+  email: '',
+  phone: '',
   lang_pref: 'fr' as 'jp' | 'fr' | 'private',
-  portrait: ''
+  portrait: '',
+  code: ''
 })
 
 const confirmPassword = ref('')
+const sendingCode = ref(false)
+const codeSent = ref(false)
+const countdown = ref(0)
 const loading = ref(false)
 const error = ref('')
 const successMessage = ref('')
@@ -225,10 +268,15 @@ const handleRegister = async () => {
         registerForm.value = {
           username: '',
           password: '',
+          email: '',
+          phone: '',
           lang_pref: 'fr',
-          portrait: ''
+          portrait: '',
+          code: ''
         }
         confirmPassword.value = ''
+        codeSent.value = false
+        countdown.value = 0
       }, 2000)
     } else {
       // 注册失败
@@ -245,6 +293,46 @@ const handleRegister = async () => {
   }
 }
 
+// 发送验证码
+const sendVerificationCode = async () => {
+  if (!registerForm.value.email) {
+    error.value = '请先输入邮箱地址'
+    return
+  }
+
+  // 简单的邮箱格式验证
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(registerForm.value.email)) {
+    error.value = '请输入有效的邮箱地址'
+    return
+  }
+
+  sendingCode.value = true
+  error.value = ''
+
+  try {
+    await sendEmailVerification({ email: registerForm.value.email })
+    showSuccess('验证码已发送到您的邮箱，请查收')
+    codeSent.value = true
+    
+    // 开始倒计时
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(timer)
+      }
+    }, 1000)
+  } catch (err: any) {
+    console.error('Send verification code error:', err)
+    const errorMessage = err.response?.data?.detail || err.response?.data?.message || '发送验证码失败'
+    showError(errorMessage)
+    error.value = errorMessage
+  } finally {
+    sendingCode.value = false
+  }
+}
+
 // 切换模式时清空错误和成功信息
 const clearMessages = () => {
   error.value = ''
@@ -252,7 +340,6 @@ const clearMessages = () => {
 }
 
 // 监听模式切换
-import { watch } from 'vue'
 watch(isLogin, () => {
   clearMessages()
 })

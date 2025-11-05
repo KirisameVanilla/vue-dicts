@@ -69,7 +69,7 @@
               <h3 class="mb-4 font-semibold text-gray-700">AI写作指导</h3>
               <div class="h-[300px] overflow-y-auto">
                 <div v-if="loading" class="flex justify-center items-center h-full text-gray-500">
-                  <div class="border-b-2 border-blue-700 rounded-full w-8 h-8 animate-spin"></div>
+                  <div class="border-blue-700 border-b-2 rounded-full w-8 h-8 animate-spin"></div>
                   <span class="ml-2">AI正在分析您的作文...</span>
                 </div>
                 <div v-else-if="writingFeedback" class="space-y-4">
@@ -124,9 +124,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 import AppFooter from '../components/AppFooter.vue'
+import { reviewArticle, resetArticleSession } from '../api/writing'
 
 const writingTypes = [
   { value: 'essay', label: '议论文' },
@@ -189,41 +190,37 @@ const getWritingHelp = async () => {
   error.value = ''
 
   try {
-    // 模拟AI分析过程
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // 调用真实的作文批改API
+    const result = await reviewArticle({
+      title_content: userText.value.trim(),
+      article_type: writingTypes.find(t => t.value === selectedType.value)?.label || '议论文'
+    }, 'fr-FR')
     
-    // 模拟AI反馈
+    // 将API返回的reply文本解析为结构化反馈
+    // 这里简单地将整个回复作为overall显示
+    // 如果API返回的是结构化的JSON，可以直接使用
     writingFeedback.value = {
-      overall: `您的作文整体结构清晰，主题明确。建议在以下方面进行改进：`,
-      grammar: [
-        '注意动词变位的准确性',
-        '检查形容词与名词的性数一致',
-        '确保时态使用的连贯性'
-      ],
-      vocabulary: [
-        '可以使用更多高级词汇来丰富表达',
-        '避免重复使用相同的词汇',
-        '尝试使用同义词增加文章的多样性'
-      ],
-      structure: [
-        '段落之间的过渡可以更加自然',
-        '可以增加更多的连接词',
-        '结论部分可以更加有力'
-      ],
-      style: [
-        '保持正式的写作风格',
-        '句子长度可以适当变化',
-        '增加一些修辞手法会更好'
-      ]
+      overall: result.reply,
+      tokens: `使用Token数: ${result.tokens}`,
+      conversation_length: `对话长度: ${result.conversation_length}`
     }
     
   } catch (err: any) {
     console.error('Writing help error:', err)
-    error.value = '获取写作指导失败，请稍后重试'
+    error.value = err.message || '获取写作指导失败，请稍后重试'
   } finally {
     loading.value = false
   }
 }
+
+// 组件卸载时重置会话
+onUnmounted(async () => {
+  try {
+    await resetArticleSession()
+  } catch (err) {
+    console.error('Failed to reset article session:', err)
+  }
+})
 
 const useTemplate = (template: string) => {
   if (userText.value && !confirm('使用模板将替换当前内容，确定继续吗？')) {
